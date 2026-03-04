@@ -48,6 +48,16 @@ export const AIExpert: React.FC = () => {
     setLoading(true);
 
     try {
+      if (!import.meta.env.VITE_SUPABASE_URL) {
+        setEdgeFunctionReady(false);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'Dr. Layla is not configured yet. Please add the VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables in your hosting settings and redeploy.',
+          timestamp: new Date().toISOString(),
+        }]);
+        setLoading(false);
+        return;
+      }
       const res = await fetch(EDGE_FUNCTION_URL, {
         method: 'POST',
         headers: {
