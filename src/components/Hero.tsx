@@ -49,7 +49,7 @@ export const Hero: React.FC = () => {
               <button onClick={() => setActiveTab('content')} className="btn-gold text-base px-6 py-3">
                 Explore Content <ArrowRight size={18} />
               </button>
-              <button onClick={() => setActiveTab('expert')} className="btn-secondary text-base px-6 py-3 border-white/30 text-white hover:bg-white/10">
+              <button onClick={() => setActiveTab('expert')} className="inline-flex items-center gap-2 px-6 py-3 bg-white/15 text-white border border-white/30 rounded-xl font-semibold text-base transition-all hover:bg-white/25 backdrop-blur-sm active:scale-95">
                 Chat with Dr. Layla <MessageCircle size={18} />
               </button>
             </div>
