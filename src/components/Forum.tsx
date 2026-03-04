@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Users, Heart, MessageCircle, Plus, Send, X, ChevronDown, ChevronUp, Search, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useApp } from '../context/AppContext';
 import toast from 'react-hot-toast';
 import type { ForumPost, ForumReply, UserProfile } from '../types';
@@ -388,6 +388,11 @@ export const Forum: React.FC = () => {
   const userId = getOrCreateUserId();
 
   const loadPosts = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      toast.error('Database not configured — add env vars in Render and redeploy.');
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase
       .from('forum_posts')
       .select(`*, replies:forum_replies(*)`)
