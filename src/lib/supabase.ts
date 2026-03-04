@@ -1,15 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Supabase public anon key — safe to be in client-side code by design
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? 'https://saqtuoztysqlzrdfjjvq.supabase.co'
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhcXR1b3p0eXNxbHpyZGZqanZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NDc3NzUsImV4cCI6MjA4ODEyMzc3NX0.mSS7T3X9HyaC8K3L2EQWE19Wj4IhURBwHh8yUKJUaV0'
 
-if (!url || !key) {
-  console.error('Missing Supabase env vars. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your hosting environment and redeploy.')
-}
-
-export const supabase = createClient(
-  url ?? 'https://placeholder.supabase.co',
-  key ?? 'placeholder'
-)
-
-export const isSupabaseConfigured = Boolean(url && key)
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+export const isSupabaseConfigured = true

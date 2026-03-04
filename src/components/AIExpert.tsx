@@ -3,8 +3,9 @@ import { Send, RotateCcw, AlertCircle, Loader2, Copy, Check } from 'lucide-react
 import toast from 'react-hot-toast';
 import type { ChatMessage } from '../types';
 
-const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? 'https://saqtuoztysqlzrdfjjvq.supabase.co'
+const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/chat`
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhcXR1b3p0eXNxbHpyZGZqanZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NDc3NzUsImV4cCI6MjA4ODEyMzc3NX0.mSS7T3X9HyaC8K3L2EQWE19Wj4IhURBwHh8yUKJUaV0'
 
 const STARTER_PROMPTS = [
   { ar: 'كيف أعلم ابني العربية وهو يعيش في بيئة إنجليزية؟', en: 'How do I teach my child Arabic when we live in an English-speaking environment?' },
