@@ -51,7 +51,7 @@ const BOOK_PRESETS = [
 ];
 
 const MOVIE_PRESETS: { label: string; category: 'documentaries' | 'arabic-kids' | 'family' }[] = [
-  { label: 'Documentaries', category: 'documentaries' },
+  { label: 'Family Docs', category: 'documentaries' },
   { label: 'Arabic Animation', category: 'arabic-kids' },
   { label: 'Family Films', category: 'family' },
 ];

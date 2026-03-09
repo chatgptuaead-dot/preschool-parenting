@@ -22,14 +22,18 @@ interface TmdbParams {
 function getCategoryConfig(category: Category): TmdbParams {
   switch (category) {
     case 'documentaries':
-      // Genre 99 = Documentary; sort by release date descending
+      // Family-friendly documentaries: Genre 99 (Documentary) + PG or lower
+      // Excludes true crime, violent, and adult content
       return {
         path: '/discover/movie',
         params: {
           with_genres: '99',
-          sort_by: 'release_date.desc',
+          sort_by: 'popularity.desc',
           'vote_count.gte': '20',
-          'primary_release_date.gte': '2018-01-01',
+          'primary_release_date.gte': '2010-01-01',
+          certification_country: 'US',
+          'certification.lte': 'PG',
+          include_adult: 'false',
         },
         mediaType: 'movie',
       };
@@ -42,22 +46,24 @@ function getCategoryConfig(category: Category): TmdbParams {
           with_original_language: 'ar',
           with_genres: '16|10751', // Animation OR Family
           sort_by: 'popularity.desc',
+          include_adult: 'false',
         },
         mediaType: 'movie',
       };
 
     case 'family':
     default:
-      // English-language family movies, recently released
+      // English-language family movies, recently released, G or PG
       return {
         path: '/discover/movie',
         params: {
           with_genres: '10751', // Family
           sort_by: 'release_date.desc',
-          'primary_release_date.gte': '2020-01-01',
+          'primary_release_date.gte': '2018-01-01',
           'vote_count.gte': '50',
           certification_country: 'US',
           'certification.lte': 'PG',
+          include_adult: 'false',
         },
         mediaType: 'movie',
       };
@@ -87,7 +93,6 @@ serve(async (req: Request) => {
       api_key: TMDB_KEY,
       language: 'en-US',
       page,
-      include_adult: 'false',
       ...params,
     });
 

@@ -98,13 +98,22 @@ interface OLDoc {
   subject?: string[];
 }
 
+function decodeHTMLEntities(str: string): string {
+  return str.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#039;/g, "'");
+}
+
 function parseOLBook(doc: OLDoc): LiveBook {
   const thumbnail = doc.cover_i ? `${OL_COVERS}/${doc.cover_i}-M.jpg` : null;
   const previewLink = `https://openlibrary.org${doc.key}`;
 
   return {
     id: doc.key,
-    title: doc.title ?? 'Unknown Title',
+    title: decodeHTMLEntities(doc.title ?? 'Unknown Title'),
     authors: doc.author_name ?? ['Unknown Author'],
     description: doc.subject?.slice(0, 4).join(', ') ?? '',
     thumbnail,
