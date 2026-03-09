@@ -46,6 +46,29 @@ export interface LiveContentState {
   refetchMovies: (query?: string) => void;
 }
 
+// ── Simple localStorage cache ─────────────────────────────────────────────────
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function getCached<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw) as { data: T; ts: number };
+    if (Date.now() - ts > CACHE_TTL_MS) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function setCache<T>(key: string, data: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
+  } catch {
+    // localStorage full or unavailable — silently ignore
+  }
+}
+
 // ── Google Books API ─────────────────────────────────────────────────────────
 // Free tier: up to 1,000 requests/day, no API key required for basic queries
 
@@ -103,10 +126,20 @@ export function useLiveBooks(initialQuery?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const fetch = useCallback(async (query?: string) => {
+    const q = query ?? initialQuery ?? BOOK_QUERIES[Math.floor(Math.random() * BOOK_QUERIES.length)];
+
+    // Serve from cache immediately if available — avoids rate-limit hits on repeat views
+    const cacheKey = `nashet_books_${q}`;
+    const cached = getCached<LiveBook[]>(cacheKey);
+    if (cached && cached.length > 0) {
+      setBooks(cached);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
-    const q = query ?? initialQuery ?? BOOK_QUERIES[Math.floor(Math.random() * BOOK_QUERIES.length)];
     const params = new URLSearchParams({
       q,
       orderBy: 'newest',
@@ -116,13 +149,18 @@ export function useLiveBooks(initialQuery?: string) {
 
     try {
       const res = await window.fetch(`${BOOKS_BASE}?${params}`);
-      if (!res.ok) throw new Error(`Google Books API ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 429) throw new Error('Google Books rate limit reached. Results will appear after a few minutes.');
+        throw new Error(`Google Books API ${res.status}`);
+      }
       const data = await res.json() as { items?: Record<string, unknown>[] };
       const items = (data.items ?? []).filter(item => {
         const info = (item.volumeInfo as Record<string, unknown>) ?? {};
         return info.title && info.authors;
       });
-      setBooks(items.map(parseGoogleBook));
+      const books = items.map(parseGoogleBook);
+      setCache(cacheKey, books);
+      setBooks(books);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load books');
     } finally {
@@ -138,8 +176,9 @@ export function useLiveBooks(initialQuery?: string) {
 // ── TMDB Movies / Documentaries API ─────────────────────────────────────────
 // Routes through our Supabase edge function to keep the TMDB read-only API key server-side
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Trim to guard against trailing whitespace/newlines pasted into hosting dashboards
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ?? '';
+const SUPABASE_ANON = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ?? '';
 const MOVIES_EDGE = `${SUPABASE_URL}/functions/v1/movies`;
 
 function parseTmdbItem(item: Record<string, unknown>, mediaType: 'movie' | 'tv'): LiveMovie {
