@@ -282,7 +282,7 @@ const LiveBookCard: React.FC<{ book: import('../hooks/useLiveContent').LiveBook 
           rel="noopener noreferrer"
           className="flex-1 btn-primary text-xs py-2 inline-flex items-center justify-center gap-1.5"
         >
-          <ExternalLink size={12} /> {book.buyLink ? 'Buy on Google Play' : 'Preview / Read'}
+          <ExternalLink size={12} /> Preview / Read
         </a>
         <a
           href={`https://www.amazon.com/s?k=${encodeURIComponent(book.title + ' ' + (book.authors[0] ?? ''))}`}
@@ -386,9 +386,9 @@ const DiscoverTab: React.FC = () => {
           <div>
             <h3 className="font-display text-lg font-semibold text-gray-800 flex items-center gap-2">
               <BookOpen size={20} className="text-blue-500" /> New & Trending Books
-              <span className="text-xs font-normal bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">Live · Google Books</span>
+              <span className="text-xs font-normal bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">Live · Open Library</span>
             </h3>
-            <p className="text-xs text-gray-400 mt-0.5">Real-time results — updated daily from Google Books API</p>
+            <p className="text-xs text-gray-400 mt-0.5">Real-time results from Open Library (openlibrary.org)</p>
           </div>
           <button
             onClick={() => refetchBooks(BOOK_PRESETS[bookPreset].query)}
@@ -516,7 +516,7 @@ const DiscoverTab: React.FC = () => {
       </section>
 
       <p className="text-xs text-center text-gray-300 pt-4 border-t border-sand-100">
-        Live content powered by Google Books API &amp; The Movie Database (TMDB). Results update daily. Curated recommendations always available in the Library tab.
+        Live content powered by Open Library &amp; The Movie Database (TMDB). Results update hourly. Curated recommendations always available in the Library tab.
       </p>
     </div>
   );

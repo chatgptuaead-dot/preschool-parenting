@@ -17,7 +17,7 @@ export interface LiveBook {
   publisher: string;
   ratingsCount: number | null;
   averageRating: number | null;
-  source: 'google-books';
+  source: 'open-library';
 }
 
 export interface LiveMovie {
@@ -69,54 +69,55 @@ function setCache<T>(key: string, data: T): void {
   }
 }
 
-// ── Google Books API ─────────────────────────────────────────────────────────
-// Free tier: up to 1,000 requests/day, no API key required for basic queries
+// ── Open Library API ──────────────────────────────────────────────────────────
+// Completely free, no API key required, no rate limits
 
-const BOOKS_BASE = 'https://www.googleapis.com/books/v1/volumes';
+const OL_SEARCH = 'https://openlibrary.org/search.json';
+const OL_COVERS = 'https://covers.openlibrary.org/b/id';
 
 const BOOK_QUERIES = [
-  'arabic children book',
-  'islamic parenting',
+  'arabic children picture book',
+  'islamic parenting guide',
   'bilingual arabic english children',
-  'middle east children picture book',
-  'quran children story',
-  'arab culture children book',
+  'middle east arab culture children',
+  'quran stories children',
+  'child development parenting research',
 ];
 
-function parseGoogleBook(item: Record<string, unknown>): LiveBook {
-  const info = (item.volumeInfo as Record<string, unknown>) ?? {};
-  const sale = (item.saleInfo as Record<string, unknown>) ?? {};
-  const access = (item.accessInfo as Record<string, unknown>) ?? {};
+interface OLDoc {
+  key: string;
+  title: string;
+  author_name?: string[];
+  first_publish_year?: number;
+  cover_i?: number;
+  publisher?: string[];
+  language?: string[];
+  ratings_average?: number;
+  ratings_count?: number;
+  number_of_pages_median?: number;
+  subject?: string[];
+}
 
-  const imgLinks = info.imageLinks as Record<string, string> | undefined;
-  let thumbnail = imgLinks?.thumbnail ?? imgLinks?.smallThumbnail ?? null;
-  // Upgrade to HTTPS and request larger image
-  if (thumbnail) {
-    thumbnail = thumbnail.replace('http://', 'https://').replace('zoom=1', 'zoom=2');
-  }
-
-  const buyLinks = (sale.buyLink as string | undefined) ?? null;
-  const webReader = (access.webReaderLink as string | undefined) ??
-    ((access.accessViewStatus === 'FULL_PUBLIC_DOMAIN' || access.viewability === 'ALL_PAGES')
-      ? `https://books.google.com/books?id=${item.id}`
-      : null);
+function parseOLBook(doc: OLDoc): LiveBook {
+  const thumbnail = doc.cover_i ? `${OL_COVERS}/${doc.cover_i}-M.jpg` : null;
+  const previewLink = `https://openlibrary.org${doc.key}`;
 
   return {
-    id: item.id as string,
-    title: (info.title as string) ?? 'Unknown Title',
-    authors: (info.authors as string[]) ?? ['Unknown Author'],
-    description: ((info.description as string) ?? '').slice(0, 400),
+    id: doc.key,
+    title: doc.title ?? 'Unknown Title',
+    authors: doc.author_name ?? ['Unknown Author'],
+    description: doc.subject?.slice(0, 4).join(', ') ?? '',
     thumbnail,
-    publishedDate: (info.publishedDate as string) ?? '',
-    pageCount: (info.pageCount as number | null) ?? null,
-    categories: (info.categories as string[]) ?? [],
-    language: (info.language as string) ?? 'en',
-    buyLink: buyLinks,
-    previewLink: webReader ?? (info.previewLink as string | null) ?? null,
-    publisher: (info.publisher as string) ?? '',
-    ratingsCount: (info.ratingsCount as number | null) ?? null,
-    averageRating: (info.averageRating as number | null) ?? null,
-    source: 'google-books',
+    publishedDate: doc.first_publish_year ? String(doc.first_publish_year) : '',
+    pageCount: doc.number_of_pages_median ?? null,
+    categories: doc.subject?.slice(0, 3) ?? [],
+    language: doc.language?.[0] ?? 'en',
+    buyLink: null,
+    previewLink,
+    publisher: doc.publisher?.[0] ?? '',
+    ratingsCount: doc.ratings_count ?? null,
+    averageRating: doc.ratings_average ?? null,
+    source: 'open-library',
   };
 }
 
@@ -128,8 +129,8 @@ export function useLiveBooks(initialQuery?: string) {
   const fetch = useCallback(async (query?: string) => {
     const q = query ?? initialQuery ?? BOOK_QUERIES[Math.floor(Math.random() * BOOK_QUERIES.length)];
 
-    // Serve from cache immediately if available — avoids rate-limit hits on repeat views
-    const cacheKey = `nashet_books_${q}`;
+    // Serve from cache immediately if available
+    const cacheKey = `nashet_books_ol_${q}`;
     const cached = getCached<LiveBook[]>(cacheKey);
     if (cached && cached.length > 0) {
       setBooks(cached);
@@ -142,25 +143,20 @@ export function useLiveBooks(initialQuery?: string) {
 
     const params = new URLSearchParams({
       q,
-      orderBy: 'newest',
-      maxResults: '20',
-      printType: 'books',
+      limit: '20',
+      sort: 'new',
+      fields: 'key,title,author_name,first_publish_year,cover_i,publisher,language,ratings_average,ratings_count,number_of_pages_median,subject',
     });
 
     try {
-      const res = await window.fetch(`${BOOKS_BASE}?${params}`);
-      if (!res.ok) {
-        if (res.status === 429) throw new Error('Google Books rate limit reached. Results will appear after a few minutes.');
-        throw new Error(`Google Books API ${res.status}`);
-      }
-      const data = await res.json() as { items?: Record<string, unknown>[] };
-      const items = (data.items ?? []).filter(item => {
-        const info = (item.volumeInfo as Record<string, unknown>) ?? {};
-        return info.title && info.authors;
-      });
-      const books = items.map(parseGoogleBook);
-      setCache(cacheKey, books);
-      setBooks(books);
+      const res = await window.fetch(`${OL_SEARCH}?${params}`);
+      if (!res.ok) throw new Error(`Open Library API ${res.status}`);
+      const data = await res.json() as { docs?: OLDoc[] };
+      const result = (data.docs ?? [])
+        .filter(doc => doc.title && (doc.author_name?.length ?? 0) > 0)
+        .map(parseOLBook);
+      setCache(cacheKey, result);
+      setBooks(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load books');
     } finally {
@@ -174,11 +170,11 @@ export function useLiveBooks(initialQuery?: string) {
 }
 
 // ── TMDB Movies / Documentaries API ─────────────────────────────────────────
-// Routes through our Supabase edge function to keep the TMDB read-only API key server-side
+// Routes through the Supabase edge function to keep the TMDB API key server-side
+// Credentials are public (anon key) — same values used in src/lib/supabase.ts
 
-// Trim to guard against trailing whitespace/newlines pasted into hosting dashboards
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ?? '';
-const SUPABASE_ANON = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ?? '';
+const SUPABASE_URL = 'https://saqtuoztysqlzrdfjjvq.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhcXR1b3p0eXNxbHpyZGZqanZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NDc3NzUsImV4cCI6MjA4ODEyMzc3NX0.mSS7T3X9HyaC8K3L2EQWE19Wj4IhURBwHh8yUKJUaV0';
 const MOVIES_EDGE = `${SUPABASE_URL}/functions/v1/movies`;
 
 function parseTmdbItem(item: Record<string, unknown>, mediaType: 'movie' | 'tv'): LiveMovie {
@@ -209,10 +205,6 @@ export function useLiveMovies(category: 'documentaries' | 'arabic-kids' | 'famil
   const [error, setError] = useState<string | null>(null);
 
   const fetch = useCallback(async (cat?: string) => {
-    if (!SUPABASE_URL || !SUPABASE_ANON) {
-      setError('Supabase not configured');
-      return;
-    }
     setLoading(true);
     setError(null);
 
