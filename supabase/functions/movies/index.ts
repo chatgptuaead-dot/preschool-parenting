@@ -22,45 +22,42 @@ interface TmdbParams {
 function getCategoryConfig(category: Category): TmdbParams {
   switch (category) {
     case 'documentaries':
-      // Family-friendly documentaries: Genre 99 (Documentary) + PG or lower
-      // Excludes true crime, violent, and adult content
+      // Educational/nature documentaries for children
+      // TV genre 10762 = Kids, genre 99 = Documentary
       return {
-        path: '/discover/movie',
+        path: '/discover/tv',
         params: {
-          with_genres: '99',
+          with_genres: '10762,99',   // Kids AND Documentary
           sort_by: 'popularity.desc',
-          'vote_count.gte': '20',
-          'primary_release_date.gte': '2010-01-01',
-          certification_country: 'US',
-          'certification.lte': 'PG',
+          'vote_count.gte': '5',
           include_adult: 'false',
         },
-        mediaType: 'movie',
+        mediaType: 'tv',
       };
 
     case 'arabic-kids':
-      // Arabic-language family/animation content
+      // Arabic-language kids animation TV shows
+      // TV genre 16 = Animation, 10762 = Kids
       return {
-        path: '/discover/movie',
+        path: '/discover/tv',
         params: {
           with_original_language: 'ar',
-          with_genres: '16|10751', // Animation OR Family
+          with_genres: '16|10762',   // Animation OR Kids
           sort_by: 'popularity.desc',
           include_adult: 'false',
         },
-        mediaType: 'movie',
+        mediaType: 'tv',
       };
 
     case 'family':
     default:
-      // English-language family movies, recently released, G or PG
+      // Popular G/PG animated and family movies — classics and recent releases
       return {
         path: '/discover/movie',
         params: {
-          with_genres: '10751', // Family
-          sort_by: 'release_date.desc',
-          'primary_release_date.gte': '2018-01-01',
-          'vote_count.gte': '50',
+          with_genres: '16,10751',   // Animation AND Family
+          sort_by: 'popularity.desc',
+          'vote_count.gte': '200',
           certification_country: 'US',
           'certification.lte': 'PG',
           include_adult: 'false',
